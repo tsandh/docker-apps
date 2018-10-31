@@ -24,13 +24,17 @@ def train_model():  # pylint: disable=unused-variable
     image_file = flask.request.files['image']
     image_file.save("train_image.jpg")
     train_image = face_recognition.load_image_file("train_image.jpg")
-    train_face_encoding = face_recognition.face_encodings(train_image)[0]
 
-    known_faces.append(train_face_encoding)
-    face_index.append(tag)
-    save_faces()
+    train_face_encodings = face_recognition.face_encodings(train_image)
+    trained = False
+    if len(train_face_encodings) > 0:
+      train_face_encoding = train_face_encodings[0]
+      known_faces.append(train_face_encoding)
+      face_index.append(tag)
+      save_faces()
+      trained = True
 
-    result = json.dumps({"tag": tag})
+    result = json.dumps({"tag": tag, "trained": trained})
     return flask.Response(status=200, response=result + "\n", mimetype='application/json')
 
 @app.route('/predict', methods=['POST'])
@@ -39,9 +43,13 @@ def predict_model():  # pylint: disable=unused-variable
     image_file.save("predict_image.jpg")
 
     predict_image = face_recognition.load_image_file("predict_image.jpg")
-    predict_face_encoding = face_recognition.face_encodings(predict_image)[0]
+    predict_face_encodings = face_recognition.face_encodings(predict_image)
 
-    results = face_recognition.compare_faces(known_faces, predict_face_encoding)
+    if len(predict_face_encodings) > 0:
+      predict_face_encoding = predict_face_encodings[0]
+      results = face_recognition.compare_faces(known_faces, predict_face_encoding)
+    else:
+      results = []
 
     predicted = -1
     for i in range(0,len(results)):
